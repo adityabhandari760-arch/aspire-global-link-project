@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import fs from 'fs/promises';
 import path from 'path';
+import { blogs } from '@/lib/data';
 
 export async function POST(request: Request) {
   try {
@@ -36,10 +37,15 @@ export async function POST(request: Request) {
     const saveFile = async (file: File, folder: string) => {
       const buffer = Buffer.from(await file.arrayBuffer());
       const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.\-_]/g, '')}`;
-      const dirPath = path.join(process.cwd(), 'public', folder);
+      
+      const isProd = process.env.NODE_ENV === 'production';
+      const baseDir = isProd ? '/tmp' : path.join(process.cwd(), 'public');
+      const dirPath = path.join(baseDir, folder);
+      
       await fs.mkdir(dirPath, { recursive: true });
       await fs.writeFile(path.join(dirPath, fileName), buffer);
-      return `/${folder}/${fileName}`;
+      
+      return isProd ? `/api/file/${folder}/${fileName}` : `/${folder}/${fileName}`;
     };
 
     let pdfUrl = undefined;
@@ -85,36 +91,43 @@ export async function POST(request: Request) {
     // Serialize object to string to inject into the TS file
     const newBlogString = JSON.stringify(newBlog, null, 4);
 
-    // Read and manipulate data.ts
-    const dataFilePath = path.join(process.cwd(), 'src', 'lib', 'data.ts');
-    let dataContents = await fs.readFile(dataFilePath, 'utf-8');
+    // In production (e.g. Vercel), the filesystem is read-only.
+    // We update the in-memory array so the new post is visible during this server instance's lifetime.
+    const isProd = process.env.NODE_ENV === 'production';
+    if (isProd) {
+      blogs.unshift(newBlog as any);
+    } else {
+      // Read and manipulate data.ts
+      const dataFilePath = path.join(process.cwd(), 'src', 'lib', 'data.ts');
+      let dataContents = await fs.readFile(dataFilePath, 'utf-8');
 
-    // We'll locate the end of the `export const blogs: Blog[] = [` array.
-    // Ensure we only look before the next export starts so we don't accidentally append to categories or tags.
-    const categoriesIndex = dataContents.indexOf('export const categories');
-    if (categoriesIndex === -1) {
-      return NextResponse.json({ error: 'Could not find export const categories' }, { status: 500 });
+      // We'll locate the end of the `export const blogs: Blog[] = [` array.
+      // Ensure we only look before the next export starts so we don't accidentally append to categories or tags.
+      const categoriesIndex = dataContents.indexOf('export const categories');
+      if (categoriesIndex === -1) {
+        return NextResponse.json({ error: 'Could not find export const categories' }, { status: 500 });
+      }
+      
+      const beforeCategories = dataContents.substring(0, categoriesIndex);
+      const arrayEndIndex = beforeCategories.lastIndexOf('];');
+      
+      if (arrayEndIndex === -1) {
+        return NextResponse.json({ error: 'Could not find the end of the blogs array in data.ts' }, { status: 500 });
+      }
+
+      let beforeEnd = dataContents.substring(0, arrayEndIndex).trimEnd();
+      const afterEnd = dataContents.substring(arrayEndIndex);
+      
+      // Check if the previous item already has a trailing comma
+      if (!beforeEnd.endsWith(',')) {
+          beforeEnd += ',';
+      }
+
+      // Add new blog item
+      const modifiedContents = `${beforeEnd}\n${newBlogString}\n${afterEnd}`;
+
+      await fs.writeFile(dataFilePath, modifiedContents, 'utf-8');
     }
-    
-    const beforeCategories = dataContents.substring(0, categoriesIndex);
-    const arrayEndIndex = beforeCategories.lastIndexOf('];');
-    
-    if (arrayEndIndex === -1) {
-      return NextResponse.json({ error: 'Could not find the end of the blogs array in data.ts' }, { status: 500 });
-    }
-
-    let beforeEnd = dataContents.substring(0, arrayEndIndex).trimEnd();
-    const afterEnd = dataContents.substring(arrayEndIndex);
-    
-    // Check if the previous item already has a trailing comma
-    if (!beforeEnd.endsWith(',')) {
-        beforeEnd += ',';
-    }
-
-    // Add new blog item
-    const modifiedContents = `${beforeEnd}\n${newBlogString}\n${afterEnd}`;
-
-    await fs.writeFile(dataFilePath, modifiedContents, 'utf-8');
 
     // Trigger revalidate so the UI updates
     revalidatePath('/', 'layout');
