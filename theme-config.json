@@ -1,0 +1,28 @@
+{
+  "header": {
+    "bg": "",
+    "text": ""
+  },
+  "footer": {
+    "bg": "",
+    "text": ""
+  },
+  "body": {
+    "bg": "",
+    "text": ""
+  },
+  "card": {
+    "bg": "",
+    "text": "",
+    "border": "",
+    "borderStyle": "",
+    "shadow": "",
+    "shadowColor": ""
+  },
+  "border": {
+    "color": ""
+  },
+  "links": {
+    "text": ""
+  }
+}

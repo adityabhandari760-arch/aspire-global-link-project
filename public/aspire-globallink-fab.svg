@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@1,900&amp;display=swap');
+    </style>
+  </defs>
+
+  <!-- Circle background -->
+  <circle cx="100" cy="100" r="100" fill="#1a1a1a"/>
+
+  <!-- Letter A from Aspire -->
+  <text
+    x="108"
+    y="162"
+    font-family="'Playfair Display', Georgia, 'Times New Roman', serif"
+    font-size="155"
+    font-weight="900"
+    font-style="italic"
+    fill="#f0f0f0"
+    text-anchor="middle">A</text>
+
+  <!-- Red dot above the A -->
+  <circle cx="126" cy="28" r="13" fill="#CC2222"/>
+</svg>

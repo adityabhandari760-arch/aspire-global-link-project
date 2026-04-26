@@ -1,0 +1,82 @@
+﻿
+> marketing-blog@0.1.0 build
+> next build
+
+Γû▓ Next.js 16.2.1 (Turbopack)
+
+  Creating an optimized production build ...
+node.exe : 
+At C:\Program Files\nod
+ejs\npm.ps1:29 char:3
++   & $NODE_EXE 
+$NPM_CLI_JS $args
++   ~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~
+    + CategoryInfo     
+         : NotSpecifi  
+  ed: (:String) [],    
+ RemoteException
+    + FullyQualifiedEr 
+   rorId : NativeComm  
+  andError
+ 
+> Build error occurred
+Error: Turbopack build 
+failed with 1 errors:
+./src/app/blog/[slug]/p
+age.tsx:10:21
+`ssr: false` is not 
+allowed with 
+`next/dynamic` in 
+Server Components. 
+Please move it into a 
+Client Component.
+  [90m 8 |[0m 
+[36mimport[0m 
+dynamic [36mfrom[0m 
+[32m"next/dynamic"[0m;
+  [90m 9 |[0m
+[31m[1m>[0m [90m10 
+|[0m [36mconst[0m 
+[33mPdfFlipbook[0m = 
+dynamic(
+  [90m   |[0m        
+             
+[31m[1m^^^^^^^[0m
+[31m[1m>[0m [90m11 
+|[0m   () => [36mimpo
+rt[0m([32m"@/componen
+ts/widgets/pdf-flipbook
+"[0m).then((mod) => mo
+d.[33mPdfFlipbook[0m)
+,
+  [90m   |[0m [31m[
+1m^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m12 
+|[0m   { ssr: 
+[36mfalse[0m }
+  [90m   |[0m [31m[
+1m^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m13 
+|[0m );
+  [90m   |[0m 
+[31m[1m^[0m
+  [90m14 |[0m
+  [90m15 |[0m 
+[36minterface[0m 
+[33mProps[0m {
+  [90m16 |[0m   
+params: 
+[33mPromise[0m<{ 
+slug: string }>;
+
+Ecmascript file had an 
+error
+
+
+    at <unknown> (./src
+/app/blog/[slug]/page.t
+sx:10:21)
