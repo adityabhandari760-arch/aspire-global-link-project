@@ -91,42 +91,46 @@ export async function POST(request: Request) {
     // Serialize object to string to inject into the TS file
     const newBlogString = JSON.stringify(newBlog, null, 4);
 
-    // In production (e.g. Vercel), the filesystem is read-only.
-    // We update the in-memory array so the new post is visible during this server instance's lifetime.
-    const isProd = process.env.NODE_ENV === 'production';
-    if (isProd) {
-      blogs.unshift(newBlog as any);
-    } else {
-      // Read and manipulate data.ts
+    // Always try to write to data.ts first (works for local development and non-read-only production environments like VPS)
+    let dataWritten = false;
+    try {
       const dataFilePath = path.join(process.cwd(), 'src', 'lib', 'data.ts');
       let dataContents = await fs.readFile(dataFilePath, 'utf-8');
 
-      // We'll locate the end of the `export const blogs: Blog[] = [` array.
-      // Ensure we only look before the next export starts so we don't accidentally append to categories or tags.
-      const categoriesIndex = dataContents.indexOf('export const categories');
-      if (categoriesIndex === -1) {
-        return NextResponse.json({ error: 'Could not find export const categories' }, { status: 500 });
-      }
-      
-      const beforeCategories = dataContents.substring(0, categoriesIndex);
-      const arrayEndIndex = beforeCategories.lastIndexOf('];');
-      
-      if (arrayEndIndex === -1) {
-        return NextResponse.json({ error: 'Could not find the end of the blogs array in data.ts' }, { status: 500 });
-      }
+      const proxyIndex = dataContents.indexOf('export const blogs: Blog[] = new Proxy');
+      if (proxyIndex !== -1) {
+        const arrayEndIndex = dataContents.lastIndexOf('];', proxyIndex);
+        
+        if (arrayEndIndex !== -1) {
+          let beforeEnd = dataContents.substring(0, arrayEndIndex).trimEnd();
+          const afterEnd = dataContents.substring(arrayEndIndex);
+          
+          if (!beforeEnd.endsWith(',')) {
+              beforeEnd += ',';
+          }
 
-      let beforeEnd = dataContents.substring(0, arrayEndIndex).trimEnd();
-      const afterEnd = dataContents.substring(arrayEndIndex);
-      
-      // Check if the previous item already has a trailing comma
-      if (!beforeEnd.endsWith(',')) {
-          beforeEnd += ',';
+          const modifiedContents = `${beforeEnd}\n${newBlogString}\n${afterEnd}`;
+          await fs.writeFile(dataFilePath, modifiedContents, 'utf-8');
+          dataWritten = true;
+        }
       }
+    } catch (err) {
+      console.warn('Could not write to data.ts, falling back to tmpdir:', err);
+    }
 
-      // Add new blog item
-      const modifiedContents = `${beforeEnd}\n${newBlogString}\n${afterEnd}`;
-
-      await fs.writeFile(dataFilePath, modifiedContents, 'utf-8');
+    // Always write to os.tmpdir() so the running production app (Proxy) can dynamically see the new post instantly!
+    try {
+      const os = require('os');
+      const tmpPath = path.join(os.tmpdir(), 'blogs.json');
+      let current = [];
+      try {
+        const tmpData = await fs.readFile(tmpPath, 'utf-8');
+        current = JSON.parse(tmpData);
+      } catch(e) {}
+      current.unshift(newBlog);
+      await fs.writeFile(tmpPath, JSON.stringify(current));
+    } catch(e) {
+      console.error('Failed to save to tmp', e);
     }
 
     // Trigger revalidate so the UI updates

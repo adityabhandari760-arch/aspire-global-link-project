@@ -277,7 +277,7 @@ export default function AdminBlogCreatePage() {
               <span>Preview</span>
               <span className="text-xs font-normal text-muted-foreground">Tailwind Supported</span>
             </div>
-            <div className="p-6 prose prose-lg dark:prose-invert max-w-none">
+            <div className="p-6 prose prose-lg dark:prose-invert prose-p:leading-relaxed prose-headings:font-bold prose-a:text-primary max-w-none">
               <div dangerouslySetInnerHTML={{ __html: formData.content }} />
             </div>
           </div>

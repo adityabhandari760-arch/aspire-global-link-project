@@ -1,6 +1,7 @@
 import { Blog, Category } from "@/types";
+import fs from "fs";
 
-export const blogs: Blog[] = [
+const initialBlogs: Blog[] = [
   {
     "id": "1775156734525",
     "slug": "south-south-trade-hits-6-8-trillion-a-quarter-of-world-commerce",
@@ -156,6 +157,23 @@ export const blogs: Blog[] = [
     "views": 1374
   }
 ];
+
+export const blogs: Blog[] = new Proxy(initialBlogs, {
+  get(target, prop) {
+    if (process.env.NODE_ENV === 'production') {
+      try {
+        const tmpPath = require('path').join(require('os').tmpdir(), 'blogs.json');
+        const tmpData = fs.readFileSync(tmpPath, 'utf-8');
+        const dynamic = JSON.parse(tmpData);
+        const combined = [...dynamic, ...target];
+        const val = combined[prop as any];
+        return typeof val === 'function' ? (val as Function).bind(combined) : val;
+      } catch (e) {}
+    }
+    const val = target[prop as any];
+    return typeof val === 'function' ? (val as Function).bind(target) : val;
+  }
+});
 
 export const categories: Category[] = [
   { id: "c1", name: "Spices", slug: "Spices", count: 4 },

@@ -12,21 +12,46 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing blog id' }, { status: 400 });
     }
 
+    const isProd = process.env.NODE_ENV === 'production';
+    if (isProd) {
+      const { blogs } = await import('@/lib/data');
+      const blog = blogs.find((b: any) => b.id === id);
+      if (blog) {
+          blog.views = (blog.views || 0) + 1;
+          
+          // Try to update os.tmpdir() + /blogs.json if it's a newly created blog
+          try {
+            const os = require('os');
+            const tmpPath = require('path').join(os.tmpdir(), 'blogs.json');
+            const tmpData = await fs.readFile(tmpPath, 'utf-8');
+            const current = JSON.parse(tmpData);
+            const tmpBlog = current.find((b: any) => b.id === id);
+            if (tmpBlog) {
+              tmpBlog.views = (tmpBlog.views || 0) + 1;
+              await fs.writeFile(tmpPath, JSON.stringify(current));
+            }
+          } catch(e) {}
+          
+          return NextResponse.json({ success: true, message: 'View recorded' });
+      }
+      return NextResponse.json({ error: 'Blog not found' }, { status: 404 });
+    }
+
     const dataFilePath = path.join(process.cwd(), 'src', 'lib', 'data.ts');
     const dataContents = await fs.readFile(dataFilePath, 'utf-8');
 
-    // Find the array block safely
-    const prefix = 'export const blogs: Blog[] = ';
+    // Find the array block safely (updated to match new data.ts structure)
+    const prefix = 'const initialBlogs: Blog[] = ';
     const arrayStartIndex = dataContents.indexOf(prefix);
     if (arrayStartIndex === -1) {
       return NextResponse.json({ error: 'Could not find blogs array' }, { status: 500 });
     }
 
     const startOfArray = arrayStartIndex + prefix.length;
-    const categoriesIndex = dataContents.indexOf('export const categories');
+    const proxyIndex = dataContents.indexOf('export const blogs: Blog[] = new Proxy');
     
-    // Find the closing bracket of the blogs array
-    const endOfArrayRaw = dataContents.lastIndexOf('];', categoriesIndex);
+    // Find the closing bracket of the initialBlogs array
+    const endOfArrayRaw = dataContents.lastIndexOf('];', proxyIndex);
     if (endOfArrayRaw === -1) {
       return NextResponse.json({ error: 'Could not find the end of the blogs array' }, { status: 500 });
     }
@@ -34,18 +59,18 @@ export async function POST(request: Request) {
 
     const arrayString = dataContents.substring(startOfArray, endOfArray);
     
-    let blogs;
+    let blogsList;
     try {
-      blogs = JSON.parse(arrayString);
+      blogsList = JSON.parse(arrayString);
     } catch (e) {
       console.error("Failed to parse blogs JSON from data.ts", e);
       return NextResponse.json({ error: 'Corruption in data file structure' }, { status: 500 });
     }
 
     let found = false;
-    for (let i = 0; i < blogs.length; i++) {
-        if (blogs[i].id === id) {
-            blogs[i].views = (blogs[i].views || 0) + 1;
+    for (let i = 0; i < blogsList.length; i++) {
+        if (blogsList[i].id === id) {
+            blogsList[i].views = (blogsList[i].views || 0) + 1;
             found = true;
             break;
         }
@@ -56,7 +81,7 @@ export async function POST(request: Request) {
     }
 
     // Reconstruct the file with the updated array
-    const newArrayString = JSON.stringify(blogs, null, 2);
+    const newArrayString = JSON.stringify(blogsList, null, 2);
     const before = dataContents.substring(0, startOfArray);
     const after = dataContents.substring(endOfArray);
     
