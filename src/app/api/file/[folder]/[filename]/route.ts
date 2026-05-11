@@ -4,15 +4,11 @@ import path from 'path';
 
 export async function GET(request: Request, { params }: { params: Promise<{ folder: string, filename: string }> }) {
   try {
-    const isProd = process.env.NODE_ENV === 'production';
-    if (!isProd) {
-      return NextResponse.json({ error: 'Only used in production' }, { status: 404 });
-    }
-    
     // Unpack params from promise
     const { folder, filename } = await params;
     
-    const filePath = path.join('/tmp', folder, filename);
+    // Serve from the persistent public folder
+    const filePath = path.join(process.cwd(), 'public', folder, filename);
     const fileBuffer = await fs.readFile(filePath);
     
     // Determine content type

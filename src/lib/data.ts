@@ -160,15 +160,25 @@ const initialBlogs: Blog[] = [
 
 export const blogs: Blog[] = new Proxy(initialBlogs, {
   get(target, prop) {
-    if (process.env.NODE_ENV === 'production') {
+    try {
+      const dataPath = require('path').join(process.cwd(), 'data', 'blogs.json');
+      const dataFile = require('fs').readFileSync(dataPath, 'utf-8');
+      const dynamic = JSON.parse(dataFile);
+      
+      let deletedIds: string[] = [];
       try {
-        const tmpPath = require('path').join(require('os').tmpdir(), 'blogs.json');
-        const tmpData = fs.readFileSync(tmpPath, 'utf-8');
-        const dynamic = JSON.parse(tmpData);
-        const combined = [...dynamic, ...target];
-        const val = combined[prop as any];
-        return typeof val === 'function' ? (val as Function).bind(combined) : val;
+        const delPath = require('path').join(process.cwd(), 'data', 'deleted_ids.json');
+        deletedIds = JSON.parse(require('fs').readFileSync(delPath, 'utf-8'));
       } catch (e) {}
+      
+      const dynamicIds = new Set(dynamic.map((b: any) => b.id));
+      const filteredTarget = target.filter((b: any) => !dynamicIds.has(b.id));
+      const combined = [...dynamic, ...filteredTarget].filter((b: any) => !deletedIds.includes(b.id));
+
+      const val = combined[prop as any];
+      return typeof val === 'function' ? (val as Function).bind(combined) : val;
+    } catch (e) {
+      // Fallback to target if file read/parse fails
     }
     const val = target[prop as any];
     return typeof val === 'function' ? (val as Function).bind(target) : val;

@@ -38,14 +38,12 @@ export async function POST(request: Request) {
       const buffer = Buffer.from(await file.arrayBuffer());
       const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.\-_]/g, '')}`;
       
-      const isProd = process.env.NODE_ENV === 'production';
-      const baseDir = isProd ? '/tmp' : path.join(process.cwd(), 'public');
-      const dirPath = path.join(baseDir, folder);
+      const dirPath = path.join(process.cwd(), 'public', folder);
       
       await fs.mkdir(dirPath, { recursive: true });
       await fs.writeFile(path.join(dirPath, fileName), buffer);
       
-      return isProd ? `/api/file/${folder}/${fileName}` : `/${folder}/${fileName}`;
+      return `/api/file/${folder}/${fileName}`;
     };
 
     let pdfUrl = undefined;
@@ -88,49 +86,20 @@ export async function POST(request: Request) {
       ...(postImage ? { postImage } : {})
     };
 
-    // Serialize object to string to inject into the TS file
-    const newBlogString = JSON.stringify(newBlog, null, 4);
-
-    // Always try to write to data.ts first (works for local development and non-read-only production environments like VPS)
-    let dataWritten = false;
+    // Save to persistent data/blogs.json
     try {
-      const dataFilePath = path.join(process.cwd(), 'src', 'lib', 'data.ts');
-      let dataContents = await fs.readFile(dataFilePath, 'utf-8');
-
-      const proxyIndex = dataContents.indexOf('export const blogs: Blog[] = new Proxy');
-      if (proxyIndex !== -1) {
-        const arrayEndIndex = dataContents.lastIndexOf('];', proxyIndex);
-        
-        if (arrayEndIndex !== -1) {
-          let beforeEnd = dataContents.substring(0, arrayEndIndex).trimEnd();
-          const afterEnd = dataContents.substring(arrayEndIndex);
-          
-          if (!beforeEnd.endsWith(',')) {
-              beforeEnd += ',';
-          }
-
-          const modifiedContents = `${beforeEnd}\n${newBlogString}\n${afterEnd}`;
-          await fs.writeFile(dataFilePath, modifiedContents, 'utf-8');
-          dataWritten = true;
-        }
-      }
-    } catch (err) {
-      console.warn('Could not write to data.ts, falling back to tmpdir:', err);
-    }
-
-    // Always write to os.tmpdir() so the running production app (Proxy) can dynamically see the new post instantly!
-    try {
-      const os = require('os');
-      const tmpPath = path.join(os.tmpdir(), 'blogs.json');
+      const dataFilePath = path.join(process.cwd(), 'data', 'blogs.json');
       let current = [];
       try {
-        const tmpData = await fs.readFile(tmpPath, 'utf-8');
-        current = JSON.parse(tmpData);
-      } catch(e) {}
+        const fileData = await fs.readFile(dataFilePath, 'utf-8');
+        current = JSON.parse(fileData);
+      } catch (err) {
+        // file might not exist or is empty
+      }
       current.unshift(newBlog);
-      await fs.writeFile(tmpPath, JSON.stringify(current));
-    } catch(e) {
-      console.error('Failed to save to tmp', e);
+      await fs.writeFile(dataFilePath, JSON.stringify(current, null, 2), 'utf-8');
+    } catch (err) {
+      console.error('Failed to save to data/blogs.json', err);
     }
 
     // Trigger revalidate so the UI updates
