@@ -237,6 +237,7 @@ export default function AdminBlogCreatePage() {
                   <option value="Business Leaders">Business Leaders</option>
                   <option value="Logistic">Logistic</option>
                   <option value="Electronics">Electronics</option>
+                  <option value="Health Care">Health Care</option>
                 </select>
               </div>
               {formData.type !== 'magazine' && (
