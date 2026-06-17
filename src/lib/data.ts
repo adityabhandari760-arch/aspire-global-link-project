@@ -193,6 +193,7 @@ export const categories: Category[] = [
   { id: "c5", name: "Logistic", slug: "Logistic", count: 3 },
   { id: "c6", name: "Electronics", slug: "Electronics", count: 3 },
   { id: "c7", name: "Health Care", slug: "Health Care", count: 3 },
+  { id: "c8", name: "Technology", slug: "Technology", count: 3 },
 ];
 
 export const popularTags = [
