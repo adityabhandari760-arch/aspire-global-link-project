@@ -22,7 +22,7 @@ const initialBlogs: Blog[] = [
       "avatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=150&auto=format&fit=crop"
     },
     "postImage": "/images/1775156734537_2026031928753467-1024x576.webp",
-    "views": 1784
+    "views": 1785
   },
   {
     "id": "1775158239802",
